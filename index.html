@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#05060a" />
+    <title>Sunny's Observation Duty</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%94%A6%3C/text%3E%3C/svg%3E" />
+    <!-- Home-screen installs on iOS ignore the manifest and read this instead. -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="flash"></div>
+    <div id="vignette"></div>
+    <div id="dread"></div>
+    <div id="grain"></div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="topbar">
+        <span id="night">NIGHT 1</span>
+        <span id="clock">🕛 12:00 AM</span>
+        <span id="reports">LOGGED: 0</span>
+        <span id="monsters">👁 SUBJECTS: 0</span>
+        <span id="active-count">ACTIVE: 0</span>
+      </div>
+      <div id="battery"><div id="battery-fill"></div><span id="battery-label">🔦 BATTERY (F)</span></div>
+      <div id="crosshair">+</div>
+      <div id="hint" class="key-only">WASD move · <b>E</b> monitor / door · <b>H</b> hide · <b>R</b> Report · <b>V</b> voice (co-op) · <b>Ctrl+C</b> free cam · <b>Esc</b> Pause</div>
+      <div id="hint-touch" class="touch-only">STICK move · drag to look · tap USE for the door</div>
+      <div id="toast"></div>
+      <div id="prompt" class="hidden"></div>
+      <div id="objective" class="hidden"></div>
+      <div id="door-warn" class="hidden">⚠ SOMETHING IS OPENING THE DOOR — <b>HIDE! (H)</b> ⚠</div>
+      <div id="stare-warn" class="hidden">👁 IT'S STARING BACK — <b>REPORT IT (R)</b> OR <b>LOOK AWAY</b> 👁</div>
+      <div id="hiding" class="hidden">▓ HIDING UNDER THE DESK — STAY STILL · <b>H</b> to come out ▓</div>
+
+      <!-- Co-op voice chat (WebRTC, codes pasted by hand — V opens it) -->
+      <div id="voice" class="hidden">
+        <button id="voice-btn" type="button">🎙 VOICE <span id="voice-dot" class="off"></span></button>
+        <div id="voice-panel" class="hidden">
+          <div id="voice-title">VOICE CHAT <button id="voice-close" type="button" title="close (V)">✕</button></div>
+          <div id="voice-status">MIC: off · LINK: not connected</div>
+          <div id="voice-meters">
+            <div class="vmeter you"><div id="voice-meter-fill"></div><span>YOU</span></div>
+            <div class="vmeter them"><div id="voice-remote-fill"></div><span>THEM</span></div>
+          </div>
+          <div class="voice-row">
+            <button id="voice-mic" type="button">ALLOW MIC</button>
+            <button id="voice-mute" type="button">MUTE (M)</button>
+          </div>
+          <div class="voice-row">
+            <button id="voice-host" type="button">1 · INVITE</button>
+            <button id="voice-join" type="button">2 · JOIN</button>
+            <button id="voice-connect" type="button">3 · CONNECT</button>
+          </div>
+          <textarea id="voice-code" rows="3" spellcheck="false" placeholder="Paste your partner's code here — or press 1 · INVITE to make one"></textarea>
+          <button id="voice-copy" type="button">COPY THE CODE ABOVE</button>
+          <p id="voice-hint">
+            YOU host: <b>INVITE</b> → send the code → paste their reply → <b>CONNECT</b>.<br>
+            THEM join: paste your invite → <b>JOIN</b> → send the reply code back.<br>
+            Turn your mic on first. Codes are long — copy the whole thing.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Touch controls: shown only on coarse-pointer devices -->
+    <div id="touch" class="hidden">
+      <div id="stick"><div id="stick-base"><div id="stick-knob"></div></div><span>STICK</span></div>
+      <div id="tpad">
+        <div class="tpad-col">
+          <button class="tbtn" data-act="KeyR">REPORT</button>
+          <button class="tbtn" data-act="KeyF">TORCH</button>
+        </div>
+        <div class="tpad-col">
+          <button class="tbtn big" data-act="KeyE">USE</button>
+          <button class="tbtn" data-act="KeyH" id="btn-hide">HIDE</button>
+          <button class="tbtn" data-act="Escape" id="btn-back">BACK</button>
+        </div>
+      </div>
+      <div id="cctv-touch" class="hidden">
+        <button class="tbtn" data-cam="prev">◀ CAM</button>
+        <button class="tbtn" data-cam="next">CAM ▶</button>
+        <button class="tbtn" data-zoom="out">ZOOM −</button>
+        <button class="tbtn" data-zoom="in">ZOOM +</button>
+        <button class="tbtn" data-act="Escape">STAND UP</button>
+      </div>
+    </div>
+
+    <!-- CCTV monitor overlay (the WebGL feed renders fullscreen behind this frame) -->
+    <div id="cctv" class="hidden">
+      <div id="cctv-label-top">
+        <span id="cctv-cam">CAM 01 — SECURITY OFFICE</span>
+        <span id="cctv-signal">LOCAL FEED</span>
+        <span id="cctv-rec">● REC</span>
+      </div>
+      <div id="cctv-label-bottom">
+        <span class="key-only"><b>N</b> next cam</span><span class="key-only"><b>B</b> prev</span><span class="key-only"><b>1–8</b> select</span>
+        <span class="key-only"><b>WHEEL</b> zoom <span id="cctv-zoom">ZOOM x1.0</span></span>
+        <span class="key-only"><b>R</b> report subject</span><span><b>E</b> / <b>Esc</b> stand up</span>
+        <span class="touch-only">buttons below · drag to pan · pinch to zoom</span>
+        <span class="touch-only"><span id="cctv-zoom-t">ZOOM x1.0</span></span>
+      </div>
+    </div>
+
+    <!-- Admin panel (` toggles): guns, godmode, speed, summons -->
+    <div id="admin" class="hidden">
+      <div id="admin-title">🔧 ADMIN <button id="admin-close" type="button" title="close (`)">✕</button></div>
+      <button id="admin-gun" type="button">🔫 GUN: OFF <span class="akey">G fires</span></button>
+      <button id="admin-rocket" type="button">🚀 ROCKET: OFF <span class="akey">T fires</span></button>
+      <label class="arow"><input id="admin-inv" type="checkbox" /> INVINCIBLE</label>
+      <label class="arow"><input id="admin-speed" type="checkbox" /> SPEED ×3</label>
+      <button id="admin-anomaly" type="button">👁 SUMMON ANOMALY</button>
+      <button id="admin-monster" type="button">👹 SUMMON MONSTER (CCTV)</button>
+      <button id="admin-hunt" type="button">🚪 SUMMON HUNT (DOOR)</button>
+      <button id="admin-banish" type="button">🧹 BANISH ALL THREATS</button>
+    </div>
+
+    <!-- Title -->
+    <div id="title-screen" class="screen">
+      <h1>🔦 SUNNY'S<br />OBSERVATION DUTY</h1>
+      <p class="sub">YOU WOKE UP... YOU HEARD A SOUND... OF THINGS MOVING... YOU TRIED TO SLEEP... YOU CANT... BUT... YOUR HOME... ALONE... TRY TO INVESTIGATE... WHAT IS HAPPENING...</p>
+      <div class="controls">
+        <h2>CONTROLS</h2>
+        <div class="controls-grid">
+          <span><b>W A S D</b></span><span>Walk around the room</span>
+          <span><b>MOUSE</b></span><span>Look (click the game to capture the mouse)</span>
+          <span><b>F</b></span><span>Flashlight on/off — it drains battery, recharges when off</span>
+          <span><b>E</b></span><span>Use the monitor at the desk (sit / stand)</span>
+          <span><b>N / B / 1–8</b></span><span>Next / previous / select security camera (8 feeds)</span>
+          <span><b>WHEEL</b></span><span>Zoom the camera feed (small far subjects need zoom)</span>
+          <span><b>H</b></span><span>Hide — under the desk, under the bed, or in a locker (17 in the building)</span>
+          <span><b>R</b></span><span>Report: anomaly under the crosshair, or the subject on the feed</span>
+          <span><b>ESC</b></span><span>Close monitor / pause</span>
+        </div>
+        <p class="sub small">A valid in-room report needs the target <b>within 6 m</b>, <b>inside the flashlight beam</b>, and the scanner off cooldown (1.5 s). A subject on camera must be <b>on screen, unblocked, and large enough</b> (zoom!). False reports only cost you time — but the subject is lethal: <b>10 seconds of its stare kills you</b>.</p>
+      </div>
+      <button id="start-btn">▶ START NIGHT 1</button>
+      <button id="start-mp-btn" class="ghost">▶ START CO-OP (LOCAL 2P)</button>
+      <button id="viewer-btn" class="ghost">👁 VIEW THE SUBJECT (3D)</button>
+      <p id="title-best" class="sub"></p>
+    </div>
+
+    <!-- 3D model viewer: the subject outside the first-person camera -->
+    <div id="viewer" class="hidden" tabindex="-1">
+      <div id="viewer-bar">
+        <strong>👁 SUBJECT — 3D MODEL</strong>
+        <button id="viewer-close" class="ghost">✕ CLOSE</button>
+      </div>
+      <div id="viewer-stage"></div>
+      <div id="viewer-tools">
+        <button class="tbtn" data-view="front">FRONT</button>
+        <button class="tbtn" data-view="side">SIDE</button>
+        <button class="tbtn" data-view="back">BACK</button>
+        <button class="tbtn" data-view="head">HEAD</button>
+        <button class="tbtn" data-view="in">+ ZOOM</button>
+        <button class="tbtn" data-view="out">− ZOOM</button>
+        <button class="tbtn" data-view="spin">⏸ PAUSE</button>
+      </div>
+      <p id="viewer-tip" class="sub"></p>
+    </div>
+
+    <!-- Night title card -->
+    <div id="nightcard-screen" class="screen hidden">
+      <h1 id="nightcard-title">🌙 NIGHT 1</h1>
+      <p id="nightcard-blurb" class="sub"></p>
+      <p id="nightcard-detail" class="sub"></p>
+      <p id="nightcard-best" class="sub"></p>
+      <button id="begin-btn">▶ BEGIN THE SHIFT</button>
+    </div>
+
+    <!-- Pause -->
+    <div id="pause-screen" class="screen hidden">
+      <h1>⏸ PAUSED</h1>
+      <p id="pause-night" class="sub"></p>
+      <p class="sub">Take a breath. The room will wait.</p>
+      <button id="resume-btn">▶ RESUME (Esc)</button>
+      <button id="restart-btn" class="ghost">↻ RESTART NIGHT</button>
+      <button id="viewer-btn-pause" class="ghost">👁 VIEW THE SUBJECT (3D)</button>
+    </div>
+
+    <!-- Game over -->
+    <div id="gameover-screen" class="screen hidden">
+      <h1 class="red">🚨 SHIFT FAILED</h1>
+      <p id="lose-reason"></p>
+      <p id="lose-stats" class="sub"></p>
+      <button id="retry-btn">↻ RETRY THIS NIGHT</button>
+    </div>
+
+    <!-- Win -->
+    <div id="win-screen" class="screen hidden">
+      <h1 class="green">🌅 SHIFT COMPLETE</h1>
+      <p id="win-night" class="sub"></p>
+      <p id="win-stats" class="sub"></p>
+      <button id="again-btn">▶ NEXT NIGHT</button>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

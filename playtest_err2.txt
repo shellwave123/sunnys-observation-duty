@@ -1,0 +1,10 @@
+(node:3544) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PLAYTEST CRASH: page.evaluate: ReferenceError: refs is not defined
+    at r.update (http://localhost:5199/:4434:7134)
+    at eval (eval at evaluate (:311:30), <anonymous>:3:86)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at C:\Users\Shaim\Desktop\SUNNYS OBSERVATION DUTY\test\playtest.mjs:107:14 {
+  log: []
+}

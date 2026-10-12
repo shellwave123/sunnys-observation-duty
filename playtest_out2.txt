@@ -1,0 +1,7 @@
+PASS  title screen visible
+PASS  title controls panel present
+PASS  title best-night line present
+PASS  night card visible
+PASS  HUD visible, phase=playing  — playing
+PASS  webgl draws scene  — triangles=9234 calls=198
+PASS  WASD movement moves player  — moved=0.66m

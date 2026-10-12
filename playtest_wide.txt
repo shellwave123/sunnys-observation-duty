@@ -1,0 +1,72 @@
+PASS  title screen visible
+PASS  title controls panel present
+PASS  title best-night line present
+PASS  night card visible
+PASS  HUD visible, phase=playing  — playing
+PASS  webgl draws scene  — triangles=14166 calls=295
+PASS  WASD movement moves player  — moved=0.63m
+PASS  furniture collision blocks player  — z=-0.80 blocked (desk face -2.05, chair front -0.88)
+PASS  bloom composer active
+PASS  shift timer advances  — +0.55s
+PASS  flashlight attached to camera + on  — dist=0.000 intensity=35.5
+PASS  R logs aimed valid anomaly  — reports 0->1
+PASS  1.5s cooldown blocks spam  — cooldown at press=1.50s
+PASS  cooldown expires
+PASS  R at nothing only warns (no strikes)  — ❌ FALSE REPORT
+PASS  Esc pauses + menu shows (pre-restart)
+PASS  restart resets all state  — {"phase":"playing","reports":0,"missed":0,"subs":0,"elapsed":0.2213000000715256,"active":0,"batt":99.51313999984265,"px":0,"pz":2.8,"yaw":0,"keys":0}
+PASS  Esc pauses + menu shows
+PASS  timers frozen while paused
+PASS  input ignored while paused
+PASS  resume returns to playing
+PASS  pause-menu restart works
+PASS  five CCTV stations  — CAM 01 SECURITY OFFICE | CAM 02 MAIN HALLWAY | CAM 03 STORAGE ROOM | CAM 04 BREAK ROOM | CAM 05 BOILER ROOM
+PASS  CCTV rooms are lit  — [{"id":"hall","key":7.28,"fill":2.63,"shellLift":0.4},{"id":"store","key":8.14,"fill":2.97,"shellLift":0.4},{"id":"break","key":7.52,"fill":2.8,"shellLift":0.4},{"id":"boiler","key":7.66,"fill":2.97,"shellLift":0.4}]
+PASS  CCTV feed is bright, not black  — centre pixel rgb(154,170,110) @800px
+PASS  E opens the monitor at the desk
+PASS  N/B/digits switch cameras  — 0->1->0->digit4=3
+PASS  wheel zooms the feed  — x1->x1.5 label=ZOOM x1.5
+PASS  R on empty feed only warns  — ❌ FALSE REPORT — no subject on this feed
+PASS  monitor cooldown expires
+PASS  subject inspectable on the feed (zoomed)
+PASS  R logs the subject on the feed
+PASS  stare builds while you watch  — stareT=1.6041000000238428
+PASS  eyes burn as it locks on
+PASS  looking away breaks the stare
+PASS  locked stare kills you  — It stared back. You should have looked away.
+PASS  retry resets the stare lock  — {"mstate":"idle","mon":false,"stare":0,"dread":0,"feedDread":0,"warnHidden":true}
+PASS  unlogged subject starts the hunt
+PASS  hunt turns the room red + beam fears  — lamp=0xff2a1a
+PASS  hunt yanks you out of the monitor
+PASS  office door swings open
+PASS  H hides under the desk
+PASS  hiding outlasts the hunt  — lamp=0xffd9a0
+PASS  exposed player is caught at the door  — It found you. Never turn your back on the door.
+PASS  retry resets the hunt layer  — {"mstate":"idle","mon":false,"door":0,"hunts":0,"subs":0}
+PASS  glimpse appears in the office
+PASS  R logs the office glimpse
+PASS  glimpse vanishes if ignored
+PASS  lights-out blacks out + restores the lamp
+PASS  lightning flashes + fades  — peak=5.6
+PASS  whisper shudders the camera
+PASS  soundboard complete + clean  — {"ok":true,"missing":[]}
+PASS  hunt bangs on the door  — 2 impacts
+PASS  occupied feed bursts static
+PASS  subject framed for the dread test
+PASS  dread vignette closes in on a lock  — opacity=0.065
+PASS  ambush behind your chair
+PASS  ambush slips away
+PASS  door rattles before the hunt  — 🚪 SOMETHING IS RATTLING THE DOOR…
+PASS  rattled subject still comes
+PASS  render loop alive (fps sampled)  — 7 fps headless-sw · auto-quality tier 2 (no bloom, no shadows)
+PASS  first-person hand exists and renders  — 13 meshes · rig(0,0) · outside world scene=true
+PASS  two hands, one rounded rectangle each, no fingers  — [{"side":1,"rootX":0.21,"fingers":0,"hasThumb":false,"palmMeshes":1,"geoType":"ExtrudeGeometry","verts":1668,"curvedParts":0},{"side":-1,"rootX":-0.22,"fingers":0,"hasThumb":false,"palmMeshes":1,"geoType":"ExtrudeGeometry","verts":1668,"curvedParts":0}]
+PASS  looking down raises both hands  — lookDown=0.93 y -0.180,-0.190 -> -0.136,-0.146
+PASS  both hands punch on report  — z -0.482,-0.482 -> -0.516,-0.516
+PASS  hands sway with the look and the walk  — rotY -0.235,0.227 -> -0.276,0.268 (R down, L up: mirrored)
+PASS  clenching curls the block hand into a fist  — {"before":[0.051,0.038],"rx":[0.661,0.645],"ry":[0.157,-0.157]}
+PASS  hand tucks away at the monitor
+PASS  best night saved to localStorage  — best=1
+PASS  zero page/console errors
+
+70/70 checks passed.

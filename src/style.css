@@ -1,0 +1,432 @@
+* { box-sizing: border-box; }
+
+/* Phone insets (notch, home indicator, landscape ears). Every one of these is
+   0 on desktop and on phones that report no inset, so they are safe to apply
+   unconditionally instead of duplicating every rule under a touch media query. */
+:root {
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
+}
+
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: #05060a;
+  font-family: 'Courier New', monospace;
+  /* Kills pull-to-refresh and rubber-band scrolling. Without this a thumb drag
+     that runs past the screen edge scrolls the page, which on iOS reloads the
+     game mid-shift. */
+  overscroll-behavior: none;
+}
+/* Drags on the canvas mean "look around", never "scroll or pinch the page".
+   Fixed positioning pins the canvas to the visual viewport, so collapsing
+   mobile toolbars can't clip the HUD. 100dvh tracks the toolbar height; plain
+   100vh stays as the fallback for browsers without dynamic viewport units. */
+#game {
+  position: fixed; inset: 0; width: 100%;
+  height: 100vh; height: 100dvh;
+  display: block; touch-action: none;
+}
+.hidden { display: none !important; }
+
+/* Brief white camera-flash on every report press */
+#flash {
+  position: fixed; inset: 0; z-index: 8; pointer-events: none;
+  background: #fff; opacity: 0;
+}
+#flash.go { animation: camflash 0.22s ease-out; }
+@keyframes camflash {
+  0% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+/* Crosshair dims while the report scanner is on cooldown */
+#crosshair.cooling { opacity: 0.3; }
+
+/* Red dread vignette: opacity driven per-frame (stare lock, hunt, kill) */
+#dread {
+  position: fixed; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(120,0,0,0.35) 68%, rgba(160,0,0,0.62) 100%);
+  transition: opacity 0.3s;
+}
+
+/* Static vignette: darkness closing in at the screen edges */
+#vignette {
+  position: fixed; inset: 0; z-index: 6; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,0.38) 74%, rgba(0,0,0,0.78) 100%);
+}
+
+/* Faint animated film grain (inline SVG turbulence, no assets) */
+#grain {
+  position: fixed; inset: -60px; z-index: 7; pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain-jitter 0.45s steps(4) infinite;
+}
+@keyframes grain-jitter {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-18px, 12px); }
+  50% { transform: translate(14px, -16px); }
+  75% { transform: translate(-10px, -8px); }
+  100% { transform: translate(0, 0); }
+}
+
+#hud { position: fixed; inset: 0; pointer-events: none; color: #ffe9a8; z-index: 5; }
+#topbar {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 18px; align-items: center;
+  background: rgba(0,0,0,0.6); border: 1px solid #5a4a2a; border-radius: 8px;
+  padding: 8px 18px; font-size: 18px; letter-spacing: 1px;
+}
+#battery {
+  position: absolute; bottom: 54px; left: 50%; transform: translateX(-50%);
+  width: 280px; height: 20px; background: rgba(0,0,0,0.6);
+  border: 1px solid #5a4a2a; border-radius: 10px; overflow: hidden;
+}
+#battery-fill { height: 100%; width: 100%; background: #7CFC00; transition: width 0.2s; }
+#battery-label { position: absolute; inset: 0; text-align: center; font-size: 12px; line-height: 20px; color: #fff; text-shadow: 0 0 4px #000; }
+#crosshair {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 28px; color: rgba(255,255,255,0.85); text-shadow: 0 0 6px #000;
+}
+#hint {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.55); padding: 6px 14px; border-radius: 6px; font-size: 14px; color: #ddd;
+}
+#hint b { color: #ffd75e; }
+/* Phone HUD: one fixed column down the top so nothing can ever land on top of
+   anything else. Measured from the real topbar height (57px at this font).
+   Every rung adds --sa-t so the whole stack slides clear of the notch/status
+   bar instead of only the first row dodging it. */
+body.touch-mode #topbar { font-size: 12px; gap: 10px; padding: 5px 10px; top: calc(6px + var(--sa-t)); }
+body.touch-mode #hint-touch {
+  position: absolute; top: calc(70px + var(--sa-t)); left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.55); padding: 3px 10px; border-radius: 6px;
+  font-size: 10px; color: #ddd; white-space: nowrap; opacity: 0.85;
+}
+body.touch-mode #battery {
+  bottom: auto; top: calc(96px + var(--sa-t)); left: 50%; transform: translateX(-50%);
+  width: 140px; height: 17px;
+}
+body.touch-mode #battery-label { font-size: 9px; line-height: 17px; }
+body.touch-mode #toast { font-size: 14px; top: calc(126px + var(--sa-t)); width: max-content; max-width: 92vw; }
+/* Bottom strip belongs to the stick and the action pad, so the objective bar
+   keeps to the clear centre channel between them. */
+body.touch-mode #objective { font-size: 12px; padding: 5px 10px; bottom: calc(78px + var(--sa-b)); }
+#monsters { color: #9adcff; font-weight: bold; }
+#prompt {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, 34px);
+  padding: 6px 14px; border-radius: 6px; font-size: 15px; font-weight: bold;
+  background: rgba(0,0,0,0.65); border: 1px solid #9adcff; color: #9adcff;
+}
+/* Where the outage objective stands. Sits above the battery so the prompt can
+   still land dead centre without the two ever stacking on each other. */
+#objective {
+  position: absolute; bottom: 84px; left: 50%; transform: translateX(-50%);
+  padding: 6px 14px; border-radius: 6px; font-size: 14px; font-weight: bold;
+  background: rgba(0,0,0,0.65); border: 1px solid #ffd75e; color: #ffd75e;
+  white-space: nowrap; max-width: 94vw; overflow: hidden; text-overflow: ellipsis;
+}
+#door-warn {
+  position: absolute; top: 130px; left: 50%; transform: translateX(-50%);
+  padding: 12px 26px; border-radius: 10px; font-size: 22px; font-weight: bold;
+  background: rgba(60,0,0,0.85); border: 2px solid #ff2222; color: #ff6666;
+  animation: warn-blink 0.5s steps(2) infinite; text-align: center;
+}
+@keyframes warn-blink { 50% { background: rgba(120,0,0,0.85); color: #ffaaaa; } }
+#stare-warn {
+  position: absolute; top: 176px; left: 50%; transform: translateX(-50%);
+  padding: 10px 24px; border-radius: 10px; font-size: 20px; font-weight: bold;
+  background: rgba(40,0,0,0.85); border: 2px solid #ff44ff; color: #ff88ff;
+  animation: warn-blink 0.4s steps(2) infinite; text-align: center;
+}
+#hiding {
+  position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
+  padding: 8px 20px; border-radius: 8px; font-size: 17px; font-weight: bold;
+  background: rgba(0,0,0,0.8); border: 1px solid #888; color: #ccc;
+}
+
+/* CCTV overlay: the WebGL feed renders fullscreen behind this frame */
+#cctv { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+#cctv::before {
+  content: ''; position: absolute; inset: 14px;
+  border: 3px solid rgba(120,255,120,0.35); border-radius: 6px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.9) inset;
+}
+#cctv-label-top, #cctv-label-bottom {
+  position: absolute; left: 30px; right: 30px;
+  display: flex; gap: 24px; align-items: center;
+  font-size: 17px; letter-spacing: 2px; color: #a8ffae;
+  text-shadow: 0 0 6px rgba(0,255,80,0.6), 0 1px 2px #000;
+}
+#cctv-label-top { top: 24px; }
+#cctv-label-bottom { bottom: 24px; font-size: 14px; color: #8fe89a; }
+#cctv-rec { color: #ff4444; animation: rec-blink 1.1s steps(2) infinite; margin-left: auto; }
+@keyframes rec-blink { 50% { opacity: 0.25; } }
+#cctv-zoom { color: #ffd75e; font-weight: bold; }
+#toast {
+  position: absolute; top: 76px; left: 50%; transform: translateX(-50%);
+  padding: 10px 22px; border-radius: 8px; font-size: 18px; font-weight: bold;
+  opacity: 0; transition: opacity 0.2s; background: rgba(0,0,0,0.7);
+}
+#toast.show { opacity: 1; }
+#toast.good { color: #7CFC00; border: 1px solid #7CFC00; }
+#toast.bad { color: #ff5b5b; border: 1px solid #ff5b5b; }
+#toast.warn { color: #ffd75e; border: 1px solid #ffd75e; }
+#toast.info { color: #9adcff; border: 1px solid #9adcff; }
+
+.screen {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10,10,20,0.88), rgba(0,0,0,0.96));
+  color: #ffe9a8; text-align: center; padding: 24px;
+  /* short windows must still be able to reach the buttons */
+  overflow-y: auto;
+}
+.screen > * { flex-shrink: 0; }
+@media (max-height: 620px) {
+  .screen h1 { font-size: 34px; margin-bottom: 8px; }
+  .screen .help { line-height: 1.7; margin: 10px 0; }
+  .controls { margin: 10px 0 4px; padding: 10px 16px; }
+  .screen button { margin-top: 8px; font-size: 17px; padding: 10px 24px; }
+}
+.screen h1 { font-size: 52px; margin: 0 0 16px; letter-spacing: 3px; text-shadow: 0 0 24px rgba(255,200,80,0.4); }
+.screen h1.red { color: #ff5b5b; }
+.screen h1.green { color: #7CFC00; }
+.screen .sub { color: #ccc; max-width: 560px; line-height: 1.6; }
+.screen .help { list-style: none; padding: 0; color: #aaa; line-height: 2; margin: 18px 0; }
+.screen button {
+  pointer-events: auto; cursor: pointer; margin-top: 12px;
+  font-family: inherit; font-size: 20px; font-weight: bold; letter-spacing: 2px;
+  color: #111; background: #ffd75e; border: none; border-radius: 8px; padding: 14px 34px;
+}
+.screen button:hover { background: #ffea9a; }
+.screen button.ghost {
+  background: transparent; color: #ffd75e;
+  border: 1px solid #ffd75e; font-size: 16px; padding: 10px 26px;
+}
+.screen button.ghost:hover { background: rgba(255,215,94,0.12); }
+
+/* Title-page controls panel */
+.controls {
+  margin: 18px 0 6px; padding: 14px 22px;
+  background: rgba(0,0,0,0.5); border: 1px solid #5a4a2a; border-radius: 10px;
+  max-width: 560px;
+}
+.controls h2 { font-size: 15px; letter-spacing: 4px; color: #ffd75e; margin: 0 0 10px; }
+.controls-grid {
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 16px;
+  text-align: left; font-size: 14px; color: #ddd;
+}
+.controls-grid b { color: #ffd75e; white-space: nowrap; }
+.controls .small { font-size: 12px; margin-top: 10px; }
+
+/* ---- 3D model viewer ---- */
+#viewer {
+  position: fixed; inset: 0; z-index: 30;
+  display: flex; flex-direction: column;
+  background: radial-gradient(ellipse at center, #12162040, #05060af2);
+  outline: none;
+}
+#viewer-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px; color: #ffe9a8; letter-spacing: 2px; font-size: 15px;
+  border-bottom: 1px solid #5a4a2a; background: rgba(0,0,0,0.6);
+}
+#viewer-bar button { margin-top: 0; }
+/* The bar's buttons are plain <button>s, so they inherit desktop metrics and
+   land around 23px tall. Phones need a 44px target to hit reliably. */
+#viewer-bar button { min-height: 44px; min-width: 44px; padding: 0 14px; }
+#viewer-stage { flex: 1; min-height: 0; }
+#viewer-tools {
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  padding: 12px; border-top: 1px solid #5a4a2a; background: rgba(0,0,0,0.6);
+}
+#viewer-tools .tbtn { pointer-events: auto; }
+#viewer-tip { margin: 0; padding: 0 18px 14px; font-size: 12px; color: #aaa; text-align: center; }
+@media (max-width: 520px) {
+  #viewer-bar { font-size: 12px; padding: 8px 12px; }
+  #viewer-tools .tbtn { min-width: 52px; min-height: 44px; font-size: 10px; padding: 0 8px; }
+  #viewer-tip { font-size: 10px; }
+}
+
+/* ---- Phone controls ----
+   Shown only on coarse-pointer devices (see touch.js). Keyboard hints are
+   swapped for touch hints rather than stacked, so the screen stays readable. */
+#touch { position: fixed; inset: 0; z-index: 7; pointer-events: none; }
+#touch.live { pointer-events: auto; }
+
+/* Movement stick: the base snaps to wherever the thumb lands inside the zone. */
+#stick {
+  position: absolute; left: 0; bottom: 0;
+  width: 46vw; max-width: 260px; height: 42vh; max-height: 260px;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: calc(18px + var(--sa-b));
+  pointer-events: auto; touch-action: none; color: rgba(255,233,168,0.45);
+  font-size: 11px; letter-spacing: 2px;
+}
+#stick-base {
+  position: absolute; left: 50%; top: 50%; width: 116px; height: 116px;
+  margin: -58px 0 0 -58px;
+  border: 2px solid rgba(255,215,94,0.4); border-radius: 50%;
+  background: rgba(0,0,0,0.3);
+  /* recentre() sets this translate; the margin above only offsets the default */
+  transition: none;
+}
+#stick-base::before, #stick-base::after {
+  content: ''; position: absolute; background: rgba(255,215,94,0.18);
+}
+#stick-base::before { left: 50%; top: 8%; bottom: 8%; width: 1px; }
+#stick-base::after { top: 50%; left: 8%; right: 8%; height: 1px; }
+#stick-knob {
+  position: absolute; left: 50%; top: 50%; width: 52px; height: 52px;
+  margin: -26px 0 0 -26px; border-radius: 50%;
+  background: rgba(255,215,94,0.55); border: 2px solid rgba(255,240,180,0.8);
+  transition: transform 0.05s linear;
+}
+#stick.active #stick-base { border-color: rgba(255,215,94,0.75); }
+
+/* Action cluster, thumb-reachable on the right. */
+#tpad {
+  position: absolute; right: calc(14px + var(--sa-r)); bottom: calc(14px + var(--sa-b));
+  display: flex; gap: 10px; align-items: flex-end; pointer-events: none;
+}
+.tpad-col { display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+/* With the feed open the camera pad owns the bottom strip, so lift the action
+   cluster clear of it instead of letting the two overlap. */
+#tpad.shifted { bottom: calc(132px + var(--sa-b)); }
+.tbtn {
+  pointer-events: auto; touch-action: none; -webkit-tap-highlight-color: transparent;
+  min-width: 64px; min-height: 64px; padding: 0 12px;
+  font-family: inherit; font-size: 13px; font-weight: bold; letter-spacing: 1px;
+  color: #ffe9a8; background: rgba(0,0,0,0.55);
+  border: 2px solid rgba(255,215,94,0.55); border-radius: 14px;
+}
+.tbtn.big { min-height: 88px; font-size: 17px; background: rgba(255,215,94,0.22); }
+/* Portrait: the camera pad wraps to two rows, so the cluster clears a taller
+   strip. Landscape keeps one row, so the smaller offset there is correct. */
+@media (orientation: portrait) {
+  #tpad.shifted { bottom: calc(196px + var(--sa-b)); }
+}
+.tbtn.down { background: rgba(255,215,94,0.5); color: #111; transform: scale(0.96); }
+
+/* CCTV buttons swap in while the monitor is up. */
+#cctv-touch {
+  position: absolute; left: 0; right: 0; bottom: calc(62px + var(--sa-b));
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  padding: 0 10px; pointer-events: auto;
+}
+#cctv-touch .tbtn { min-height: 52px; min-width: 58px; font-size: 12px; }
+
+/* Hide the desktop hint, show the touch one. */
+.touch-only { display: none; }
+body.touch-mode .touch-only { display: flex; }
+body.touch-mode .key-only { display: none !important; }
+body.touch-mode #cctv-label-bottom { bottom: calc(128px + var(--sa-b)); font-size: 12px; flex-direction: column; gap: 4px; align-items: flex-start; left: calc(18px + var(--sa-l)); }
+body.touch-mode #cctv-label-top { font-size: 13px; left: calc(18px + var(--sa-l)); right: calc(18px + var(--sa-r)); }
+/* Row offsets above the measured heights: toast wraps to two lines (54px) and
+   the warnings to three (79px), so these gaps are real, not guessed. */
+body.touch-mode #hiding { bottom: auto; top: calc(188px + var(--sa-t)); font-size: 12px; padding: 6px 14px; }
+body.touch-mode #door-warn { font-size: 15px; padding: 8px 14px; top: calc(250px + var(--sa-t)); }
+body.touch-mode #stare-warn { font-size: 14px; padding: 8px 14px; top: calc(336px + var(--sa-t)); }
+body.touch-mode #crosshair { font-size: 22px; }
+body.touch-mode .screen h1 { font-size: 30px; }
+body.touch-mode .controls-grid { grid-template-columns: 1fr; gap: 2px; font-size: 12px; }
+body.touch-mode .controls-grid b { display: block; }
+
+/* Narrow phones wrap every banner onto an extra line, so the whole stack
+   shifts down to clear the real (taller) boxes. */
+@media (max-width: 360px) {
+  body.touch-mode #hint-touch { top: calc(74px + var(--sa-t)); font-size: 9px; }
+  body.touch-mode #battery { top: calc(100px + var(--sa-t)); }
+  body.touch-mode #toast { top: calc(130px + var(--sa-t)); font-size: 13px; }
+  body.touch-mode #hiding { top: calc(212px + var(--sa-t)); }
+  body.touch-mode #door-warn { top: calc(278px + var(--sa-t)); font-size: 14px; }
+  body.touch-mode #stare-warn { top: calc(374px + var(--sa-t)); font-size: 13px; }
+}
+
+/* Landscape phones are short: pull the furniture in so nothing overlaps. */
+@media (orientation: landscape) and (max-height: 480px) {
+  #stick { height: 74vh; padding-bottom: calc(8px + var(--sa-b)); }
+  #stick-base { width: 104px; height: 104px; margin: -52px 0 0 -52px; }
+  #stick-knob { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+  .tbtn { min-width: 56px; min-height: 52px; font-size: 11px; }
+  .tbtn.big { min-height: 66px; font-size: 14px; }
+  #cctv-touch { bottom: calc(46px + var(--sa-b)); }
+  #tpad.shifted { bottom: calc(116px + var(--sa-b)); }
+  body.touch-mode #cctv-label-bottom { bottom: calc(102px + var(--sa-b)); }
+}
+
+/* --- Co-op voice chat (WebRTC with hand-copied invite codes) --- */
+#voice { position: absolute; top: 10px; left: 10px; pointer-events: auto; }
+#voice-btn {
+  font: inherit; font-size: 13px; font-weight: bold; letter-spacing: 1px;
+  color: #ffe9a8; background: rgba(0,0,0,0.62); border: 1px solid #5a4a2a;
+  border-radius: 6px; padding: 7px 11px; cursor: pointer;
+}
+#voice-btn:hover { border-color: #ffd75e; }
+#voice-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  background: #666; margin-left: 5px; vertical-align: middle; }
+#voice-dot.live { background: #7CFC00; box-shadow: 0 0 7px #7CFC00; }
+#voice-dot.bad { background: #ff5b5b; box-shadow: 0 0 7px #ff5b5b; }
+
+#voice-panel {
+  position: absolute; top: 36px; left: 0; width: min(348px, calc(100vw - 20px));
+  background: rgba(0,0,0,0.88); border: 1px solid #5a4a2a; border-radius: 8px;
+  padding: 10px; color: #ffe9a8; font-size: 13px; text-align: left;
+}
+#voice-title { display: flex; justify-content: space-between; align-items: center;
+  font-weight: bold; letter-spacing: 2px; color: #ffd75e; font-size: 13px; }
+#voice-close { font: inherit; font-size: 13px; color: #ffe9a8; background: none;
+  border: 1px solid #5a4a2a; border-radius: 5px; width: 26px; height: 24px;
+  cursor: pointer; line-height: 1; }
+#voice-close:hover { border-color: #ff5b5b; color: #ff5b5b; }
+#voice-status { margin: 7px 0 6px; font-size: 12px; color: #9adcff; word-break: break-word; }
+
+#voice-meters { display: grid; gap: 4px; margin-bottom: 8px; }
+.vmeter { position: relative; height: 12px; background: #141414;
+  border: 1px solid #3a3220; border-radius: 6px; overflow: hidden; }
+.vmeter > div { height: 100%; width: 0; transition: width 90ms linear; }
+.vmeter.you > div { background: #7CFC00; }
+.vmeter.them > div { background: #9adcff; }
+.vmeter span { position: absolute; top: 0; left: 6px; font-size: 9px; line-height: 12px;
+  color: rgba(255,233,168,0.75); letter-spacing: 1px; }
+
+.voice-row { display: flex; gap: 6px; margin-bottom: 6px; }
+#voice-panel button {
+  flex: 1; font: inherit; font-size: 12px; font-weight: bold; color: #ffe9a8;
+  background: rgba(255,215,94,0.10); border: 2px solid rgba(255,215,94,0.55);
+  border-radius: 8px; padding: 7px 6px; cursor: pointer;
+}
+#voice-panel button:hover:not(:disabled) { background: rgba(255,215,94,0.28); }
+#voice-panel button:disabled { opacity: 0.45; cursor: default; }
+#voice-copy { width: 100%; margin-bottom: 6px; }
+#voice-code {
+  width: 100%; box-sizing: border-box; margin-bottom: 6px; resize: vertical;
+  font-family: Consolas, "Courier New", monospace; font-size: 11px; line-height: 1.4;
+  color: #9adcff; background: #0b0b0b; border: 1px solid #5a4a2a;
+  border-radius: 6px; padding: 6px; word-break: break-all;
+}
+#voice-code:focus { outline: none; border-color: #ffd75e; }
+#voice-hint { margin: 0; font-size: 11px; line-height: 1.55; color: #c9b98a; }
+#voice-hint b { color: #ffd75e; }
+
+body.touch-mode #voice-btn { font-size: 12px; padding: 6px 9px; }
+body.touch-mode #voice-panel { top: 32px; font-size: 12px; }
+body.touch-mode #voice-panel button { font-size: 11px; min-height: 40px; }
+body.touch-mode #voice-code { font-size: 12px; min-height: 54px; }
+
+/* Phones: the centred HUD stack owns the top edge, so the voice chip sits
+   under it on the left where the column never reaches. */
+body.touch-mode #voice { top: calc(40px + var(--sa-t)); left: 6px; }
+body.touch-mode #voice-panel { top: 34px; max-height: calc(100vh - 120px); overflow-y: auto; }
+
+/* Admin panel: debug cheats, toggled with backquote. */
+#admin { position: absolute; top: 60px; right: 10px; z-index: 60; width: 230px; background: rgba(8,10,16,.95); border: 1px solid #ffd75e; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #ffe9a8; }
+#admin.hidden { display: none; }
+#admin-title { display: flex; justify-content: space-between; align-items: center; font-weight: bold; letter-spacing: 1px; }
+#admin button { background: #1a2030; color: #ffe9a8; border: 1px solid #555f7a; border-radius: 6px; padding: 7px 6px; font-size: 12px; cursor: pointer; text-align: left; }
+#admin button:hover { border-color: #ffd75e; }
+#admin .akey { float: right; opacity: .6; font-size: 10px; }
+#admin .arow { display: flex; gap: 8px; align-items: center; background: #1a2030; border: 1px solid #555f7a; border-radius: 6px; padding: 7px 6px; cursor: pointer; }
+#admin input[type=checkbox] { width: 16px; height: 16px; accent-color: #ffd75e; }
