@@ -8,7 +8,18 @@
 // The mic is optional on each side: a player without one (or who denied the
 // permission) can still listen and be the one who pastes codes, because the
 // peer that starts the invite adds a receive-only audio transceiver.
-const ICE = [{ urls: 'stun:stun.l.google.com:19302' }];
+// Cross-network voice: STUN finds your public address on most home routers,
+// and the free OpenRelay TURN relays audio when both sides sit behind strict
+// NATs (mobile data, dorms, corporate wifi) where a direct path can't form.
+// No account or server of ours involved — codes still swap over any chat app.
+const ICE = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  {
+    urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'],
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+];
 
 const enc = (obj) => {
   const bytes = new TextEncoder().encode(JSON.stringify(obj));
